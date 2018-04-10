@@ -1,0 +1,25 @@
+{
+    "name": "ethanzway/laravel-auth",
+    "description": "Laravel Auth package.",
+    "require": {
+        "php": "^7.0",
+        "illuminate/contracts": "5.*",
+        "illuminate/http": "5.*",
+        "illuminate/queue": "5.*",
+        "illuminate/support": "5.*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Ethanzway\\Auth\\": "src/"
+        }
+    },
+	"extra": {
+        "laravel": {
+            "providers": [
+                "Ethanzway\\Auth\\AuthServiceProvider"
+            ],
+            "aliases": {
+            }
+        }
+    }
+}
