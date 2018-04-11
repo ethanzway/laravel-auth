@@ -163,6 +163,29 @@ class AuthManager implements FactoryContract
     }
 
     /**
+     * Create a jwt based authentication guard.
+     *
+     * @param  string  $name
+     * @param  array  $config
+     * @return \Ethanzway\Auth\TokenGuard
+     */
+    public function createJwtDriver($name, $config)
+    {
+        // The jwt guard implements a json web token based guard implementation
+        // that makes an json web token field from the request and matches it to the
+        // user in the layer where users are.
+        $guard = new JwtGuard(
+            $this->createUserProvider($config['provider'] ?? null),
+			$this->app['jwt'],
+            $this->app['request']
+        );
+
+        $this->app->refresh('request', $guard, 'setRequest');
+
+        return $guard;
+    }
+
+    /**
      * Get the guard configuration.
      *
      * @param  string  $name

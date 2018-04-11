@@ -6,12 +6,13 @@ use BadMethodCallException;
 use Illuminate\Http\Request;
 use Ethanzway\Auth\GuardHelpers;
 use Illuminate\Contracts\Auth\StatefulGuard;
-use Ethanzway\JWT\Contracts\Subject;
+use Ethanzway\JWT\JWT;
 use Ethanzway\JWT\Exceptions\JWTException;
 use Illuminate\Contracts\Auth\UserProvider;
-use Ethanzway\JWT\Exceptions\UserNotDefinedException;
+use Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException;
+use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 
-class JWTGuard implements StatefulGuard
+class JwtGuard implements StatefulGuard
 {
     use GuardHelpers;
 
@@ -21,10 +22,10 @@ class JWTGuard implements StatefulGuard
 
     protected $request;
 
-    public function __construct(JWT $jwt, UserProvider $provider, Request $request)
+    public function __construct(UserProvider $provider, JWT $jwt, Request $request)
     {
-        $this->jwt = $jwt;
         $this->provider = $provider;
+        $this->jwt = $jwt;
         $this->request = $request;
     }
 
@@ -34,68 +35,8 @@ class JWTGuard implements StatefulGuard
             return $this->user;
         }
 
-        if ($this->jwt->setRequest($this->request)->getToken() &&
-            ($payload = $this->jwt->check(true)) &&
-            $this->validateSubject()
-        ) {
+        if ($this->jwt->setRequest($this->request)->getToken() && ($payload = $this->jwt->check(true))) {
             return $this->user = $this->provider->retrieveById($payload['sub']);
-        }
-    }
-
-    public function userOrFail()
-    {
-        if (! $user = $this->user()) {
-            throw new UserNotDefinedException;
-        }
-
-        return $user;
-    }
-
-    public function validate(array $credentials = [])
-    {
-        return (bool) $this->attempt($credentials, false);
-    }
-
-    public function attempt(array $credentials = [], $login = true)
-    {
-        $this->lastAttempted = $user = $this->provider->retrieveByCredentials($credentials);
-
-        if ($this->hasValidCredentials($user, $credentials)) {
-            return $login ? $this->login($user) : true;
-        }
-
-        return false;
-    }
-
-    public function login(Subject $user)
-    {
-        $this->setUser($user);
-
-        return $this->jwt->fromUser($user);
-    }
-
-    public function logout($forceForever = false)
-    {
-        $this->requireToken()->invalidate($forceForever);
-
-        $this->user = null;
-        $this->jwt->unsetToken();
-    }
-
-    public function refresh($forceForever = false, $resetClaims = false)
-    {
-        return $this->requireToken()->refresh($forceForever, $resetClaims);
-    }
-
-    public function invalidate($forceForever = false)
-    {
-        return $this->requireToken()->invalidate($forceForever);
-    }
-
-    public function tokenById($id)
-    {
-        if ($user = $this->provider->retrieveById($id)) {
-            return $this->jwt->fromUser($user);
         }
     }
 
@@ -121,40 +62,56 @@ class JWTGuard implements StatefulGuard
         return false;
     }
 
-    public function byId($id)
+    public function validate(array $credentials = [])
     {
-        return $this->onceUsingId($id);
+        return (bool) $this->attempt($credentials, false);
     }
 
-    public function claims(array $claims)
+    public function attempt(array $credentials = [], $login = true)
     {
-        $this->jwt->claims($claims);
+        $this->lastAttempted = $user = $this->provider->retrieveByCredentials($credentials);
 
-        return $this;
+        if ($this->hasValidCredentials($user, $credentials)) {
+            return $login ? $this->login($user) : true;
+        }
+
+        return false;
     }
 
-    public function getPayload()
+    public function refresh($forceForever = false, $resetClaims = false)
     {
-        return $this->requireToken()->getPayload();
+        return $this->requireToken()->refresh($forceForever, $resetClaims);
     }
 
-    public function payload()
+    public function loginUsingId($id, $remember = false)
     {
-        return $this->getPayload();
+        if (! is_null($user = $this->provider->retrieveById($id))) {
+            $this->login($user, $remember);
+
+            return $user;
+        }
+
+        return false;
     }
 
-    public function setToken($token)
+    public function login(AuthenticatableContract $user, $remember = false)
     {
-        $this->jwt->setToken($token);
+        $this->setUser($user);
 
-        return $this;
+        return $this->jwt->fromSubject($user, $user->getAuthIdentifier(), []);
     }
 
-    public function setTTL($ttl)
+    public function logout($forceForever = false)
     {
-        $this->jwt->factory()->setTTL($ttl);
+        $this->requireToken()->invalidate($forceForever);
 
-        return $this;
+        $this->user = null;
+        $this->jwt->unsetToken();
+    }
+
+    public function viaRemember()
+    {
+        return false;
     }
 
     public function getProvider()
@@ -174,6 +131,11 @@ class JWTGuard implements StatefulGuard
         return $this->user;
     }
 
+    public function getLastAttempted()
+    {
+        return $this->lastAttempted;
+    }
+
     public function getRequest()
     {
         return $this->request ?: Request::createFromGlobals();
@@ -186,23 +148,9 @@ class JWTGuard implements StatefulGuard
         return $this;
     }
 
-    public function getLastAttempted()
-    {
-        return $this->lastAttempted;
-    }
-
     protected function hasValidCredentials($user, $credentials)
     {
         return $user !== null && $this->provider->validateCredentials($user, $credentials);
-    }
-
-    protected function validateSubject()
-    {
-        if (! method_exists($this->provider, 'getModel')) {
-            return true;
-        }
-
-        return $this->jwt->checkProvider($this->provider->getModel());
     }
 
     protected function requireToken()
@@ -212,14 +160,5 @@ class JWTGuard implements StatefulGuard
         }
 
         return $this->jwt;
-    }
-
-    public function __call($method, $parameters)
-    {
-        if (method_exists($this->jwt, $method)) {
-            return call_user_func_array([$this->jwt, $method], $parameters);
-        }
-
-        throw new BadMethodCallException("Method [$method] does not exist.");
     }
 }
