@@ -6,7 +6,8 @@
         "illuminate/contracts": "5.*",
         "illuminate/http": "5.*",
         "illuminate/queue": "5.*",
-        "illuminate/support": "5.*"
+        "illuminate/support": "5.*",
+        "ethanzway/jwt": "dev-master"
     },
     "autoload": {
         "psr-4": {

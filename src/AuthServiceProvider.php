@@ -3,12 +3,34 @@
 namespace Ethanzway\Auth;
 
 use Ethanzway\Auth\Access\Gate;
+use Ethanzway\Auth\Console\AuthMakeCommand;
+use Ethanzway\Auth\Console\AuthTableCommand;
+use Ethanzway\Auth\Console\ClearResetsCommand;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Contracts\Auth\Access\Gate as GateContract;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 
 class AuthServiceProvider extends ServiceProvider
 {
+    /**
+     * Boot the service provider.
+     *
+     * @return void
+     */
+    public function boot()
+	{
+        $path = realpath(__DIR__.'/../config/config.php');
+
+        $this->publishes([$path => config_path('auth.php')], 'config');
+        $this->mergeConfigFrom($path, 'auth');
+		
+		$this->commands([
+			'AuthMake' => 'command.auth.make',
+			'AuthTable' => 'command.auth.table',
+			'ClearResets' => 'command.auth.resets.clear',
+		]);
+	}
+
     /**
      * Register the service provider.
      *
@@ -23,6 +45,12 @@ class AuthServiceProvider extends ServiceProvider
         $this->registerAccessGate();
 
         $this->registerRequestRebindHandler();
+
+        $this->registerAuthMakeCommand();
+
+        $this->registerAuthTableCommand();
+
+        $this->registerClearResetsCommand();
     }
 
     /**
@@ -85,6 +113,42 @@ class AuthServiceProvider extends ServiceProvider
             $request->setUserResolver(function ($guard = null) use ($app) {
                 return call_user_func($app['auth']->userResolver(), $guard);
             });
+        });
+    }
+	
+    /**
+     * Register the command.
+     *
+     * @return void
+     */
+    protected function registerAuthMakeCommand()
+    {
+        $this->app->singleton('command.auth.make', function ($app) {
+            return new AuthMakeCommand;
+        });
+    }
+	
+    /**
+     * Register the command.
+     *
+     * @return void
+     */
+    protected function registerAuthTableCommand()
+    {
+        $this->app->singleton('command.auth.table', function ($app) {
+            return new AuthTableCommand($app['files'], $app['composer']);
+        });
+    }
+
+    /**
+     * Register the command.
+     *
+     * @return void
+     */
+    protected function registerClearResetsCommand()
+    {
+        $this->app->singleton('command.auth.resets.clear', function () {
+            return new ClearResetsCommand;
         });
     }
 }
