@@ -26,7 +26,6 @@ class AuthServiceProvider extends ServiceProvider
 		
 		$this->commands([
 			'AuthMake' => 'command.auth.make',
-			'AuthTable' => 'command.auth.table',
 			'ClearResets' => 'command.auth.resets.clear',
 		]);
 	}
@@ -47,8 +46,6 @@ class AuthServiceProvider extends ServiceProvider
         $this->registerRequestRebindHandler();
 
         $this->registerAuthMakeCommand();
-
-        $this->registerAuthTableCommand();
 
         $this->registerClearResetsCommand();
     }
@@ -125,18 +122,6 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->app->singleton('command.auth.make', function ($app) {
             return new AuthMakeCommand;
-        });
-    }
-	
-    /**
-     * Register the command.
-     *
-     * @return void
-     */
-    protected function registerAuthTableCommand()
-    {
-        $this->app->singleton('command.auth.table', function ($app) {
-            return new AuthTableCommand($app['files'], $app['composer']);
         });
     }
 
