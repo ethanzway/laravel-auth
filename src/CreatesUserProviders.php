@@ -34,6 +34,8 @@ trait CreatesUserProviders
         }
 
         switch ($driver) {
+            case 'database':
+                return $this->createDatabaseProvider($config);
             case 'eloquent':
                 return $this->createEloquentProvider($config);
             default:
@@ -54,6 +56,19 @@ trait CreatesUserProviders
         if ($provider = $provider ?: $this->getDefaultUserProvider()) {
             return $this->app['config']['auth.providers.'.$provider];
         }
+    }
+
+    /**
+     * Create an instance of the database user provider.
+     *
+     * @param  array  $config
+     * @return \Ethanzway\Auth\DatabaseUserProvider
+     */
+    protected function createDatabaseProvider($config)
+    {
+        $connection = $this->app['db']->connection();
+
+        return new DatabaseUserProvider($connection, $this->app['hash'], $config['table']);
     }
 
     /**
