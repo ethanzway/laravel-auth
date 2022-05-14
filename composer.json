@@ -7,7 +7,7 @@
         "illuminate/http": "5.*",
         "illuminate/queue": "5.*",
         "illuminate/support": "5.*",
-        "ethanzway/laravel-jwt": "dev-master"
+        "ethanzway/laravel-jwt": "5.*"
     },
     "autoload": {
         "psr-4": {
