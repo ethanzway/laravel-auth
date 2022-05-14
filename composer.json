@@ -14,7 +14,7 @@
             "Ethanzway\\Auth\\": "src/"
         }
     },
-	"extra": {
+    "extra": {
         "laravel": {
             "providers": [
                 "Ethanzway\\Auth\\AuthServiceProvider"
